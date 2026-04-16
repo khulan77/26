@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String        @id @default(cuid())
+  clerkId   String        @unique
+  name      String?
+  email     String        @unique
+  role      Role          @default(CUSTOMER)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  products      Product[]     @relation("UserProducts") // Зарахаар нэмсэн бараанууд
+  savedProducts SavedProduct[] // Хадгалсан (Wishlist) бараанууд
+  histories     ChatHistory[]
+  orders        Order[]
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  category    String
+  price       Float
+  image       String
+  description String?
+  tags        String[]
+  stock       Int         @default(1)
+  location    String?
+  isFeatured  Boolean     @default(false) // Онцлох бараа эсэх (Admin control)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  sellerId    String
+  seller      User        @relation("UserProducts", fields: [sellerId], references: [id])
+
+  orderItems    OrderItem[]
+  savedByUsers  SavedProduct[]
+}
+
+// ЭНЭ ШИНЭ: Барааг шууд худалдаж авалгүй хадгалахад зориулсан модел
+model SavedProduct {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId]) // Нэг хэрэглэгч нэг барааг нэг л удаа хадгалах
+}
+
+model ChatHistory {
+  id        String   @id @default(cuid())
+  query     String
+  type      String
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  total     Float
+  address   String?     // Нэмэлт: Нөхцөл байдлаас шалтгаалж хоосон байж болно
+  status    OrderStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  quantity  Int
+  price     Float    // Тухайн үеийн үнийг хадгалах (барааны үнэ өөрчлөгдөж болно)
+
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  SELLER
+  CUSTOMER
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
