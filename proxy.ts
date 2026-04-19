@@ -1,14 +1,18 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
+// Хамгаалалттай замууд
 const isProtectedRoute = createRouteMatcher([
   "/admin(.*)",
   "/seller(.*)",
 ]);
 
+// Чиний нэрлэсэн 'proxy' функц
 const proxy = clerkMiddleware(async (auth, req) => {
+  // Хэрвээ хэрэглэгч /admin эсвэл /seller руу орвол нэвтрэхийг шаардана
   if (isProtectedRoute(req)) {
     await auth.protect();
   }
+  // Бусад бүх зам (нүүр хуудас, sign-in, sign-up) нээлттэй үлдэнэ
 });
 
 export default proxy;
